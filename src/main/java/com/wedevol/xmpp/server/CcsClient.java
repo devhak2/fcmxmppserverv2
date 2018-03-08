@@ -154,7 +154,7 @@ public class CcsClient implements StanzaListener {
 			@Override
 			public void connectionClosed() {
 				logger.log(Level.INFO, "Connection closed. The current connectionDraining flag is: %s.", isConnectionDraining);
-				if (isConnectionDraining) {
+				if (isConnectionDraining) { // TODO: This may be changed because XMPP server force to disconnect without sending the draining message.
 					reconnect();
 				}
 			}
@@ -400,8 +400,13 @@ public class CcsClient implements StanzaListener {
 			try {
 				connection.sendStanza(request);
 				backoff.doNotRetry();
-			} catch (NotConnectedException | InterruptedException e) {
+			} catch (InterruptedException e) {
 				logger.log(Level.INFO, "The packet could not be sent due to a connection problem. Packet: {}", request.toXML());
+				backoff.errorOccured();
+			} catch (NotConnectedException e) {
+				// Sometimes, XMPP Server force to disconnect. So, need to reconnect.
+				logger.log(Level.INFO, e.getMessage(), request.toXML());
+				reconnect();
 				backoff.errorOccured();
 			}
 		}
